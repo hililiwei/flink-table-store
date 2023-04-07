@@ -22,6 +22,7 @@ import org.apache.paimon.Snapshot;
 import org.apache.paimon.Snapshot.CommitKind;
 import org.apache.paimon.fs.FileIO;
 import org.apache.paimon.fs.Path;
+import org.apache.paimon.shade.guava30.com.google.common.collect.ImmutableList;
 
 import javax.annotation.Nullable;
 
@@ -29,10 +30,14 @@ import java.io.IOException;
 import java.io.Serializable;
 import java.util.Comparator;
 import java.util.Iterator;
+import java.util.List;
+import java.util.NoSuchElementException;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 import java.util.function.BinaryOperator;
+import java.util.function.Function;
 import java.util.function.Predicate;
+import org.apache.paimon.table.Table;
 
 import static org.apache.paimon.utils.FileUtils.listVersionedFiles;
 
@@ -63,7 +68,20 @@ public class SnapshotManager implements Serializable {
         return new Path(tablePath + "/snapshot/" + SNAPSHOT_PREFIX + snapshotId);
     }
 
+    public Snapshot snapshot(Path path) {
+        return Snapshot.fromPath(fileIO, path);
+    }
+
     public Snapshot snapshot(long snapshotId) {
+        Snapshot snapshot = latestSnapshot();
+        if (snapshot.version() >= 4) {
+            Optional<Snapshot> first =
+                    snapshot.snapshots().stream().filter(s -> s.id() == snapshotId).findFirst();
+            if (first.isPresent()) {
+                return first.get();
+            }
+        }
+
         return Snapshot.fromPath(fileIO, snapshotPath(snapshotId));
     }
 
@@ -80,7 +98,7 @@ public class SnapshotManager implements Serializable {
 
     public @Nullable Snapshot latestSnapshot() {
         Long snapshotId = latestSnapshotId();
-        return snapshotId == null ? null : snapshot(snapshotId);
+        return snapshotId == null ? null : snapshot(snapshotPath(snapshotId));
     }
 
     public @Nullable Long latestSnapshotId() {
@@ -168,6 +186,13 @@ public class SnapshotManager implements Serializable {
     }
 
     public Iterator<Snapshot> snapshots() throws IOException {
+        Snapshot snapshot = latestSnapshot();
+        if (snapshot.version() >= 4) {
+            List<Snapshot> snapshots = snapshot.snapshots();
+            snapshots.sort(Comparator.comparingLong(Snapshot::id));
+            return snapshots.iterator();
+        }
+
         return listVersionedFiles(fileIO, snapshotDirectory(), SNAPSHOT_PREFIX)
                 .map(this::snapshot)
                 .sorted(Comparator.comparingLong(Snapshot::id))
@@ -265,5 +290,49 @@ public class SnapshotManager implements Serializable {
         Path hintFile = new Path(snapshotDir, fileName);
         fileIO.delete(hintFile, false);
         fileIO.writeFileUtf8(hintFile, String.valueOf(snapshotId));
+    }
+
+    private static Iterable<Snapshot> ancestorsOf(
+            Snapshot snapshot, Function<Long, Snapshot> lookup) {
+        if (snapshot != null) {
+            return () ->
+                    new Iterator<Snapshot>() {
+                        private Snapshot next = snapshot;
+                        private boolean consumed = false; // include the snapshot in its history
+
+                        @Override
+                        public boolean hasNext() {
+                            if (!consumed) {
+                                return true;
+                            }
+
+                            Long parentId = next.parentId();
+                            if (parentId == null) {
+                                return false;
+                            }
+
+                            this.next = lookup.apply(parentId);
+                            if (next != null) {
+                                this.consumed = false;
+                                return true;
+                            }
+
+                            return false;
+                        }
+
+                        @Override
+                        public Snapshot next() {
+                            if (hasNext()) {
+                                this.consumed = true;
+                                return next;
+                            }
+
+                            throw new NoSuchElementException();
+                        }
+                    };
+
+        } else {
+            return ImmutableList.of();
+        }
     }
 }

@@ -47,6 +47,7 @@ import java.util.Map;
  *   <li>Version 2: Introduced in paimon 0.3. Add "version" field and "changelogManifestList" field.
  *   <li>Version 3: Introduced in paimon 0.4. Add "baseRecordCount" field, "deltaRecordCount" field
  *       and "changelogRecordCount" field.
+ *   <li>Version 4: Add "parentId" field
  * </ul>
  *
  * <p>Unversioned change list:
@@ -63,9 +64,10 @@ public class Snapshot {
     public static final long FIRST_SNAPSHOT_ID = 1;
 
     public static final int TABLE_STORE_02_VERSION = 1;
-    private static final int CURRENT_VERSION = 3;
+    private static final int CURRENT_VERSION = 4;
 
     private static final String FIELD_VERSION = "version";
+    private static final String FIELD_PARENT_ID = "parentId";
     private static final String FIELD_ID = "id";
     private static final String FIELD_SCHEMA_ID = "schemaId";
     private static final String FIELD_BASE_MANIFEST_LIST = "baseManifestList";
@@ -86,6 +88,10 @@ public class Snapshot {
     @JsonProperty(FIELD_VERSION)
     @Nullable
     private final Integer version;
+
+    @JsonProperty(FIELD_PARENT_ID)
+    @Nullable
+    private final Long parentId;
 
     @JsonProperty(FIELD_ID)
     private final long id;
@@ -157,6 +163,7 @@ public class Snapshot {
     private final Long watermark;
 
     public Snapshot(
+            @Nullable Long parentId,
             long id,
             long schemaId,
             String baseManifestList,
@@ -173,6 +180,7 @@ public class Snapshot {
             @Nullable Long watermark) {
         this(
                 CURRENT_VERSION,
+                parentId,
                 id,
                 schemaId,
                 baseManifestList,
@@ -192,6 +200,7 @@ public class Snapshot {
     @JsonCreator
     public Snapshot(
             @JsonProperty(FIELD_VERSION) @Nullable Integer version,
+            @JsonProperty(FIELD_PARENT_ID) @Nullable Long parentId,
             @JsonProperty(FIELD_ID) long id,
             @JsonProperty(FIELD_SCHEMA_ID) long schemaId,
             @JsonProperty(FIELD_BASE_MANIFEST_LIST) String baseManifestList,
@@ -207,6 +216,7 @@ public class Snapshot {
             @JsonProperty(FIELD_CHANGELOG_RECORD_COUNT) Long changelogRecordCount,
             @JsonProperty(FILED_WATERMARK) Long watermark) {
         this.version = version;
+        this.parentId = parentId;
         this.id = id;
         this.schemaId = schemaId;
         this.baseManifestList = baseManifestList;
@@ -227,6 +237,12 @@ public class Snapshot {
     public int version() {
         // there is no version field for paimon <= 0.2
         return version == null ? TABLE_STORE_02_VERSION : version;
+    }
+
+    @JsonGetter(FIELD_PARENT_ID)
+    @Nullable
+    public Long parentId() {
+        return parentId;
     }
 
     @JsonGetter(FIELD_ID)
@@ -384,6 +400,26 @@ public class Snapshot {
         } catch (IOException e) {
             throw new RuntimeException("Fails to read snapshot from path " + path, e);
         }
+    }
+
+    public Snapshot copyWithParentId(Long parentId) {
+        return new Snapshot(
+                version,
+                parentId,
+                id,
+                schemaId,
+                baseManifestList,
+                deltaManifestList,
+                changelogManifestList,
+                commitUser,
+                commitIdentifier,
+                commitKind,
+                timeMillis,
+                logOffsets,
+                totalRecordCount,
+                deltaRecordCount,
+                changelogRecordCount,
+                watermark);
     }
 
     /** Type of changes in this snapshot. */

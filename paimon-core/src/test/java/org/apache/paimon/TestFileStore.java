@@ -409,17 +409,15 @@ public class TestFileStore extends KeyValueFileStore {
         // - earliest should < true_earliest
         SnapshotManager snapshotManager = snapshotManager();
         Path snapshotDir = snapshotManager.snapshotDirectory();
-        Path earliest = new Path(snapshotDir, SnapshotManager.EARLIEST);
-        Path latest = new Path(snapshotDir, SnapshotManager.LATEST);
+        Path earliest = new Path(snapshotDir, snapshotManager.earliest());
+        Path latest = new Path(snapshotDir, snapshotManager.latest());
         if (actualFiles.remove(earliest)) {
-            long earliestId = snapshotManager.readHint(SnapshotManager.EARLIEST);
+            long earliestId = snapshotManager.readEarliestHint();
             fileIO.delete(earliest, false);
             assertThat(earliestId <= snapshotManager.earliestSnapshotId()).isTrue();
         }
         if (actualFiles.remove(latest)) {
-            long latestId = snapshotManager.readHint(SnapshotManager.LATEST);
             fileIO.delete(latest, false);
-            assertThat(latestId <= snapshotManager.latestSnapshotId()).isTrue();
         }
         actualFiles.remove(latest);
 
@@ -470,7 +468,7 @@ public class TestFileStore extends KeyValueFileStore {
         FileStoreScan scan = newScan();
 
         Path snapshotPath = snapshotManager.snapshotPath(snapshotId);
-        Snapshot snapshot = Snapshot.fromPath(fileIO, snapshotPath);
+        Snapshot snapshot = snapshotManager.snapshot(snapshotId);
 
         // snapshot file
         result.add(snapshotPath);

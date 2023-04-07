@@ -52,6 +52,7 @@ import org.apache.paimon.types.DataTypes;
 import org.apache.paimon.types.RowKind;
 import org.apache.paimon.types.RowType;
 import org.apache.paimon.utils.SnapshotManager;
+import org.apache.paimon.utils.SnapshotManagerBuilder;
 import org.apache.paimon.utils.TraceableFileIO;
 
 import org.junit.jupiter.api.AfterEach;
@@ -434,7 +435,7 @@ public abstract class FileStoreTableTestBase {
         }
 
         SnapshotManager snapshotManager =
-                new SnapshotManager(FileIOFinder.find(tablePath), table.location());
+                SnapshotManagerBuilder.of(FileIOFinder.find(tablePath), table.location());
         Long latestSnapshotId = snapshotManager.latestSnapshotId();
         assertThat(latestSnapshotId).isNotNull();
         for (int i = 1; i <= latestSnapshotId; i++) {

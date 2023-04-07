@@ -41,7 +41,7 @@ import org.apache.paimon.types.TimestampType;
 import org.apache.paimon.utils.IteratorRecordReader;
 import org.apache.paimon.utils.ProjectedRow;
 import org.apache.paimon.utils.SerializationUtils;
-import org.apache.paimon.utils.SnapshotManager;
+import org.apache.paimon.utils.SnapshotManagerBuilder;
 
 import java.io.IOException;
 import java.time.Instant;
@@ -146,7 +146,7 @@ public class SnapshotsTable implements ReadonlyTable {
         @Override
         public long rowCount() {
             try {
-                return new SnapshotManager(fileIO, location).snapshotCount();
+                return SnapshotManagerBuilder.of(fileIO, location).snapshotCount();
             } catch (IOException e) {
                 throw new RuntimeException(e);
             }
@@ -197,7 +197,7 @@ public class SnapshotsTable implements ReadonlyTable {
                 throw new IllegalArgumentException("Unsupported split: " + split.getClass());
             }
             Path location = ((SnapshotsSplit) split).location;
-            Iterator<Snapshot> snapshots = new SnapshotManager(fileIO, location).snapshots();
+            Iterator<Snapshot> snapshots = SnapshotManagerBuilder.of(fileIO, location).snapshots();
             Iterator<InternalRow> rows = Iterators.transform(snapshots, this::toRow);
             if (projection != null) {
                 rows =

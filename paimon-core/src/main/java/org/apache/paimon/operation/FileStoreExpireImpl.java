@@ -135,7 +135,7 @@ public class FileStoreExpireImpl implements FileStoreExpire {
             // No expire happens:
             // write the hint file in order to see the earliest snapshot directly next time
             // should avoid duplicate writes when the file exists
-            if (snapshotManager.readHint(SnapshotManager.EARLIEST) == null) {
+            if (snapshotManager.readEarliestHint() == null) {
                 writeEarliestHint(endExclusiveId);
             }
 
@@ -220,7 +220,7 @@ public class FileStoreExpireImpl implements FileStoreExpire {
             }
 
             // delete snapshot
-            fileIO.deleteQuietly(snapshotManager.snapshotPath(id));
+            snapshotManager.expireSnapshot(id);
         }
 
         writeEarliestHint(endExclusiveId);

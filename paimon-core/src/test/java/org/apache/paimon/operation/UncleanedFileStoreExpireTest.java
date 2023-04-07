@@ -53,6 +53,7 @@ public class UncleanedFileStoreExpireTest extends FileStoreExpireTestBase {
         List<Path> unusedFileList =
                 Files.walk(Paths.get(tempDir.toString()))
                         .filter(Files::isRegularFile)
+                        .filter(p -> !p.getFileName().toString().startsWith("metadata"))
                         .filter(p -> !p.getFileName().toString().startsWith("snapshot"))
                         .filter(p -> !p.getFileName().toString().startsWith("schema"))
                         .map(p -> new Path(p.toString()))

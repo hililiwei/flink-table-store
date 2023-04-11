@@ -50,6 +50,7 @@ import org.apache.paimon.types.RowType;
 import org.apache.paimon.utils.FileStorePathFactory;
 import org.apache.paimon.utils.RecordWriter;
 import org.apache.paimon.utils.SnapshotManager;
+import org.apache.paimon.utils.SnapshotManagerChain;
 
 import org.apache.flink.api.java.tuple.Tuple2;
 
@@ -101,7 +102,7 @@ public class TestChangelogDataReadWrite {
                         RowType.of(new IntType()),
                         "default",
                         CoreOptions.FILE_FORMAT.defaultValue().toString());
-        this.snapshotManager = new SnapshotManager(LocalFileIO.create(), new Path(root));
+        this.snapshotManager = SnapshotManagerChain.of(LocalFileIO.create(), new Path(root));
         this.commitUser = UUID.randomUUID().toString();
     }
 

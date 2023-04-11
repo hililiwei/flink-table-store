@@ -30,6 +30,7 @@ import org.apache.paimon.schema.SchemaManager;
 import org.apache.paimon.types.RowType;
 import org.apache.paimon.utils.FileStorePathFactory;
 import org.apache.paimon.utils.SnapshotManager;
+import org.apache.paimon.utils.SnapshotManagerChain;
 
 import java.time.Duration;
 import java.util.Comparator;
@@ -70,7 +71,7 @@ public abstract class AbstractFileStore<T> implements FileStore<T> {
 
     @Override
     public SnapshotManager snapshotManager() {
-        return new SnapshotManager(fileIO, options.path());
+        return SnapshotManagerChain.of(fileIO, options.path());
     }
 
     @VisibleForTesting

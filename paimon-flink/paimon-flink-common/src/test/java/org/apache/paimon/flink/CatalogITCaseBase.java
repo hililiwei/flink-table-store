@@ -25,6 +25,7 @@ import org.apache.paimon.fs.local.LocalFileIO;
 import org.apache.paimon.shade.guava30.com.google.common.collect.ImmutableList;
 import org.apache.paimon.utils.BlockingIterator;
 import org.apache.paimon.utils.SnapshotManager;
+import org.apache.paimon.utils.SnapshotManagerChain;
 
 import org.apache.flink.table.api.EnvironmentSettings;
 import org.apache.flink.table.api.TableEnvironment;
@@ -145,7 +146,7 @@ public abstract class CatalogITCaseBase extends AbstractTestBase {
     @Nullable
     protected Snapshot findLatestSnapshot(String tableName) {
         SnapshotManager snapshotManager =
-                new SnapshotManager(LocalFileIO.create(), getTableDirectory(tableName));
+                SnapshotManagerChain.of(LocalFileIO.create(), getTableDirectory(tableName));
         Long id = snapshotManager.latestSnapshotId();
         return id == null ? null : snapshotManager.snapshot(id);
     }

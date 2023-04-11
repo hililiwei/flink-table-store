@@ -19,7 +19,6 @@
 package org.apache.paimon.utils;
 
 import org.apache.paimon.Snapshot;
-import org.apache.paimon.Snapshot.CommitKind;
 import org.apache.paimon.fs.FileIO;
 import org.apache.paimon.fs.Path;
 
@@ -27,244 +26,94 @@ import javax.annotation.Nullable;
 
 import java.io.IOException;
 import java.io.Serializable;
-import java.util.Comparator;
 import java.util.Iterator;
 import java.util.Optional;
-import java.util.concurrent.TimeUnit;
 import java.util.function.BinaryOperator;
 import java.util.function.Predicate;
 
 import static org.apache.paimon.utils.FileUtils.listVersionedFiles;
 
 /** Manager for {@link Snapshot}, providing utility methods related to paths and snapshot hints. */
-public class SnapshotManager implements Serializable {
+public abstract class SnapshotManager implements Serializable {
 
     private static final long serialVersionUID = 1L;
 
-    private static final String SNAPSHOT_PREFIX = "snapshot-";
-    public static final String EARLIEST = "EARLIEST";
-    public static final String LATEST = "LATEST";
-    private static final int READ_HINT_RETRY_NUM = 3;
-    private static final int READ_HINT_RETRY_INTERVAL = 1;
+    protected static final int READ_HINT_RETRY_NUM = 3;
+    protected static final int READ_HINT_RETRY_INTERVAL = 1;
 
-    private final FileIO fileIO;
-    private final Path tablePath;
+    protected final FileIO fileIO;
+    protected final Path tablePath;
 
     public SnapshotManager(FileIO fileIO, Path tablePath) {
         this.fileIO = fileIO;
         this.tablePath = tablePath;
     }
 
-    public Path snapshotDirectory() {
-        return new Path(tablePath + "/snapshot");
+    public abstract String earliest();
+
+    public abstract String latest();
+
+    public abstract String snapshotPrefix();
+
+    public abstract Path snapshotDirectory();
+
+    public abstract Path snapshotPath(long snapshotId);
+
+    public abstract Path newSnapshotPath(long snapshotId);
+
+    public void expireSnapshot(long snapshotId) {
+        fileIO.deleteQuietly(snapshotPath(snapshotId));
     }
 
-    public Path snapshotPath(long snapshotId) {
-        return new Path(tablePath + "/snapshot/" + SNAPSHOT_PREFIX + snapshotId);
-    }
+    public abstract Snapshot snapshot(long snapshotId);
 
-    public Snapshot snapshot(long snapshotId) {
-        return Snapshot.fromPath(fileIO, snapshotPath(snapshotId));
-    }
+    public abstract boolean snapshotExists(long snapshotId);
 
-    public boolean snapshotExists(long snapshotId) {
-        Path path = snapshotPath(snapshotId);
-        try {
-            return fileIO.exists(path);
-        } catch (IOException e) {
-            throw new RuntimeException(
-                    "Failed to determine if snapshot #" + snapshotId + " exists in path " + path,
-                    e);
-        }
-    }
+    public abstract @Nullable Snapshot latestSnapshot();
 
-    public @Nullable Snapshot latestSnapshot() {
-        Long snapshotId = latestSnapshotId();
-        return snapshotId == null ? null : snapshot(snapshotId);
-    }
+    public abstract @Nullable Long latestSnapshotId();
 
-    public @Nullable Long latestSnapshotId() {
-        try {
-            return findLatest();
-        } catch (IOException e) {
-            throw new RuntimeException("Failed to find latest snapshot id", e);
-        }
-    }
+    public abstract @Nullable Long earliestSnapshotId();
 
-    public @Nullable Long earliestSnapshotId() {
-        try {
-            return findEarliest();
-        } catch (IOException e) {
-            throw new RuntimeException("Failed to find earliest snapshot id", e);
-        }
-    }
+    public abstract @Nullable Long latestCompactedSnapshotId();
 
-    public @Nullable Long latestCompactedSnapshotId() {
-        return pickFromLatest(s -> s.commitKind() == CommitKind.COMPACT);
-    }
-
-    public @Nullable Long pickFromLatest(Predicate<Snapshot> predicate) {
-        Long latestId = latestSnapshotId();
-        Long earliestId = earliestSnapshotId();
-        if (latestId == null || earliestId == null) {
-            return null;
-        }
-
-        for (long snapshotId = latestId; snapshotId >= earliestId; snapshotId--) {
-            if (snapshotExists(snapshotId)) {
-                Snapshot snapshot = snapshot(snapshotId);
-                if (predicate.test(snapshot)) {
-                    return snapshot.id();
-                }
-            }
-        }
-
-        return null;
-    }
+    public abstract @Nullable Long pickFromLatest(Predicate<Snapshot> predicate);
 
     /**
      * Returns a snapshot earlier than the timestamp mills. A non-existent snapshot may be returned
      * if all snapshots are later than the timestamp mills.
      */
-    public @Nullable Long earlierThanTimeMills(long timestampMills) {
-        Long earliest = earliestSnapshotId();
-        Long latest = latestSnapshotId();
-        if (earliest == null || latest == null) {
-            return null;
-        }
-
-        for (long i = latest; i >= earliest; i--) {
-            long commitTime = snapshot(i).timeMillis();
-            if (commitTime < timestampMills) {
-                return i;
-            }
-        }
-        return earliest - 1;
-    }
+    public abstract @Nullable Long earlierThanTimeMills(long timestampMills);
 
     /**
      * Returns a {@link Snapshot} whoes commit time is earlier than or equal to given timestamp
      * mills. If there is no such a snapshot, returns null.
      */
-    public @Nullable Snapshot earlierOrEqualTimeMills(long timestampMills) {
-        Long earliest = earliestSnapshotId();
-        Long latest = latestSnapshotId();
-        if (earliest == null || latest == null) {
-            return null;
-        }
+    public abstract @Nullable Snapshot earlierOrEqualTimeMills(long timestampMills);
 
-        for (long i = latest; i >= earliest; i--) {
-            Snapshot snapshot = snapshot(i);
-            long commitTime = snapshot.timeMillis();
-            if (commitTime <= timestampMills) {
-                return snapshot;
-            }
-        }
-        return null;
-    }
+    public abstract long snapshotCount() throws IOException;
 
-    public long snapshotCount() throws IOException {
-        return listVersionedFiles(fileIO, snapshotDirectory(), SNAPSHOT_PREFIX).count();
-    }
+    public abstract Iterator<Snapshot> snapshots() throws IOException;
 
-    public Iterator<Snapshot> snapshots() throws IOException {
-        return listVersionedFiles(fileIO, snapshotDirectory(), SNAPSHOT_PREFIX)
-                .map(this::snapshot)
-                .sorted(Comparator.comparingLong(Snapshot::id))
-                .iterator();
-    }
+    public abstract Optional<Snapshot> latestSnapshotOfUser(String user);
 
-    public Optional<Snapshot> latestSnapshotOfUser(String user) {
-        Long latestId = latestSnapshotId();
-        if (latestId == null) {
-            return Optional.empty();
-        }
+    public abstract Long readHint(String fileName);
 
-        long earliestId =
-                Preconditions.checkNotNull(
-                        earliestSnapshotId(),
-                        "Latest snapshot id is not null, but earliest snapshot id is null. "
-                                + "This is unexpected.");
-        for (long id = latestId; id >= earliestId; id--) {
-            Snapshot snapshot = snapshot(id);
-            if (user.equals(snapshot.commitUser())) {
-                return Optional.of(snapshot);
-            }
-        }
-        return Optional.empty();
-    }
+    public abstract Long readEarliestHint();
 
-    private @Nullable Long findLatest() throws IOException {
+    public abstract Long readLatestHint();
+
+    public abstract boolean commit(long newSnapshotId, Path newSnapshotPath, Snapshot newSnapshot)
+            throws IOException;
+
+    public abstract void commitLatestHint(long snapshotId) throws IOException;
+
+    public abstract void commitEarliestHint(long snapshotId) throws IOException;
+
+    protected Long findByListFiles(BinaryOperator<Long> reducer) throws IOException {
         Path snapshotDir = snapshotDirectory();
-        if (!fileIO.exists(snapshotDir)) {
-            return null;
-        }
-
-        Long snapshotId = readHint(LATEST);
-        if (snapshotId != null) {
-            long nextSnapshot = snapshotId + 1;
-            // it is the latest only there is no next one
-            if (!snapshotExists(nextSnapshot)) {
-                return snapshotId;
-            }
-        }
-
-        return findByListFiles(Math::max);
-    }
-
-    private @Nullable Long findEarliest() throws IOException {
-        Path snapshotDir = snapshotDirectory();
-        if (!fileIO.exists(snapshotDir)) {
-            return null;
-        }
-
-        Long snapshotId = readHint(EARLIEST);
-        // null and it is the earliest only it exists
-        if (snapshotId != null && snapshotExists(snapshotId)) {
-            return snapshotId;
-        }
-
-        return findByListFiles(Math::min);
-    }
-
-    public Long readHint(String fileName) {
-        Path snapshotDir = snapshotDirectory();
-        Path path = new Path(snapshotDir, fileName);
-        int retryNumber = 0;
-        while (retryNumber++ < READ_HINT_RETRY_NUM) {
-            try {
-                return Long.parseLong(fileIO.readFileUtf8(path));
-            } catch (Exception ignored) {
-            }
-            try {
-                TimeUnit.MILLISECONDS.sleep(READ_HINT_RETRY_INTERVAL);
-            } catch (InterruptedException e) {
-                Thread.currentThread().interrupt();
-                throw new RuntimeException(e);
-            }
-        }
-        return null;
-    }
-
-    private Long findByListFiles(BinaryOperator<Long> reducer) throws IOException {
-        Path snapshotDir = snapshotDirectory();
-        return listVersionedFiles(fileIO, snapshotDir, SNAPSHOT_PREFIX)
+        return listVersionedFiles(fileIO, snapshotDir, snapshotPrefix())
                 .reduce(reducer)
                 .orElse(null);
-    }
-
-    public void commitLatestHint(long snapshotId) throws IOException {
-        commitHint(snapshotId, LATEST);
-    }
-
-    public void commitEarliestHint(long snapshotId) throws IOException {
-        commitHint(snapshotId, EARLIEST);
-    }
-
-    private void commitHint(long snapshotId, String fileName) throws IOException {
-        Path snapshotDir = snapshotDirectory();
-        Path hintFile = new Path(snapshotDir, fileName);
-        fileIO.delete(hintFile, false);
-        fileIO.writeFileUtf8(hintFile, String.valueOf(snapshotId));
     }
 }

@@ -422,6 +422,7 @@ public class FileStoreCommitImpl implements FileStoreCommit {
             Snapshot.CommitKind commitKind,
             Long safeLatestSnapshotId) {
         while (true) {
+            LOG.info("Try to commit snapshot");
             Long latestSnapshotId = snapshotManager.latestSnapshotId();
             if (tryCommitOnce(
                     tableFiles,
@@ -490,7 +491,7 @@ public class FileStoreCommitImpl implements FileStoreCommit {
             Long safeLatestSnapshotId) {
         long newSnapshotId =
                 latestSnapshotId == null ? Snapshot.FIRST_SNAPSHOT_ID : latestSnapshotId + 1;
-        Path newSnapshotPath = snapshotManager.snapshotPath(newSnapshotId);
+        Path newSnapshotPath = snapshotManager.newSnapshotPath(newSnapshotId);
 
         if (LOG.isDebugEnabled()) {
             LOG.debug("Ready to commit table files to snapshot #" + newSnapshotId);
@@ -564,6 +565,7 @@ public class FileStoreCommitImpl implements FileStoreCommit {
             // prepare snapshot file
             newSnapshot =
                     new Snapshot(
+                            latestSnapshotId,
                             newSnapshotId,
                             schemaManager.latest().get().id(),
                             previousChangesListName,
@@ -602,14 +604,7 @@ public class FileStoreCommitImpl implements FileStoreCommit {
         boolean success;
         try {
             Callable<Boolean> callable =
-                    () -> {
-                        boolean committed =
-                                fileIO.writeFileUtf8(newSnapshotPath, newSnapshot.toJson());
-                        if (committed) {
-                            snapshotManager.commitLatestHint(newSnapshotId);
-                        }
-                        return committed;
-                    };
+                    () -> snapshotManager.commit(newSnapshotId, newSnapshotPath, newSnapshot);
             if (lock != null) {
                 success =
                         lock.runWithLock(

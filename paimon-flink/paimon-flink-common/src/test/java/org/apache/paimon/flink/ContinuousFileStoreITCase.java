@@ -23,6 +23,7 @@ import org.apache.paimon.fs.local.LocalFileIO;
 import org.apache.paimon.shade.guava30.com.google.common.collect.ImmutableList;
 import org.apache.paimon.utils.BlockingIterator;
 import org.apache.paimon.utils.SnapshotManager;
+import org.apache.paimon.utils.SnapshotManagerChain;
 
 import org.apache.flink.table.api.ValidationException;
 import org.apache.flink.testutils.junit.extensions.parameterized.ParameterizedTestExtension;
@@ -145,7 +146,7 @@ public class ContinuousFileStoreITCase extends CatalogITCaseBase {
         iterator.close();
 
         SnapshotManager snapshotManager =
-                new SnapshotManager(LocalFileIO.create(), getTableDirectory("T1"));
+                SnapshotManagerChain.of(LocalFileIO.create(), getTableDirectory("T1"));
         List<Snapshot> snapshots =
                 new ArrayList<>(ImmutableList.copyOf(snapshotManager.snapshots()));
         snapshots.sort(Comparator.comparingLong(Snapshot::timeMillis));

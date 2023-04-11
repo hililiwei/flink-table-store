@@ -143,7 +143,7 @@ public class FileStoreCommitTest {
         testRandomConcurrentNoConflict(1, false, CoreOptions.ChangelogProducer.NONE);
         SnapshotManager snapshotManager = createStore(false, 1).snapshotManager();
         Path snapshotDir = snapshotManager.snapshotDirectory();
-        Path latest = new Path(snapshotDir, SnapshotManager.LATEST);
+        Path latest = new Path(snapshotDir, snapshotManager.latest());
 
         assertThat(new LocalFileIO().exists(latest)).isTrue();
 

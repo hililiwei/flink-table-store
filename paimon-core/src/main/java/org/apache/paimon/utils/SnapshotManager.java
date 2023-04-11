@@ -77,7 +77,7 @@ public abstract class SnapshotManager implements Serializable {
 
     public abstract @Nullable Long latestCompactedSnapshotId();
 
-    public abstract @Nullable Long pickSnapshot(Predicate<Snapshot> predicate);
+    public abstract @Nullable Long pickFromLatest(Predicate<Snapshot> predicate);
 
     /**
      * Returns a snapshot earlier than the timestamp mills. A non-existent snapshot may be returned

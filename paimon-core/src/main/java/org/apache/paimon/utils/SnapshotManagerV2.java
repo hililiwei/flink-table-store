@@ -56,14 +56,14 @@ public class SnapshotManagerV2 extends SnapshotManager {
     private static final String TABLE_METADATA_PREFIX = "metadata-";
     private static final String METADATA_LATEST = "METADATA_LATEST";
     private static final String METADATA_EARLIEST = "METADATA_EARLIEST";
-
-    private final SnapshotManagerV1 superManager;
     private boolean useV2 = true;
+    private final SnapshotManagerV1 superManager;
 
     public SnapshotManagerV2(FileIO fileIO, Path tablePath) {
         super(fileIO, tablePath);
         superManager = new SnapshotManagerV1(fileIO, tablePath);
         try {
+            // todo upgrade table or not?
             if (!metadataExists() && superManager.snapshotCount() > 0) {
                 upgradeTable();
             }
@@ -85,104 +85,8 @@ public class SnapshotManagerV2 extends SnapshotManager {
         return TABLE_METADATA_PREFIX;
     }
 
-    private Optional<Long> findLatestMetadataId() throws IOException {
-        Path metadataDirectory = tableMetadataDirectory(tablePath);
-        if (!fileIO.exists(metadataDirectory)) {
-            return Optional.empty();
-        }
-
-        Long metadataId = readMetadataHint(METADATA_LATEST);
-        if (metadataId != null) {
-            long nextId = metadataId + 1;
-            // it is the latest only there is no next one
-            if (!medataExists(nextId)) {
-                return Optional.of(metadataId);
-            }
-        }
-
-        return Optional.of(findByListFiles(Math::max));
-    }
-
-    private Optional<TableMetadata> findLatestMetadata() {
-        try {
-            return findLatestMetadataId().map(id -> tableMetadata(fileIO, metadataPath(id)));
-        } catch (IOException e) {
-            throw new RuntimeException("Failed to find latest metadata", e);
-        }
-    }
-
     @Override
     public Path snapshotDirectory() {
-        return new Path(tablePath + "/snapshot");
-    }
-
-    private void upgradeTable() {
-        List<Snapshot> snapshots;
-        try {
-            List<Snapshot> snapshotHis = Lists.newArrayList(superManager.snapshots());
-            snapshots = Lists.newArrayList();
-            Long parentId = null;
-            for (Snapshot snapshot : snapshotHis) {
-                snapshots.add(snapshot.copyWithParentId(parentId));
-                parentId = snapshot.id();
-            }
-
-            Snapshot currentSnapshot = snapshots.get(snapshots.size() - 1);
-            TableMetadata newTableMetadata =
-                    new TableMetadata(
-                            currentSnapshot.timeMillis(),
-                            Maps.newHashMap(),
-                            currentSnapshot.id(),
-                            snapshots);
-
-            long currentSnapshotId = currentSnapshot.id();
-
-            boolean committed =
-                    fileIO.writeFileUtf8(
-                            metadataPath(currentSnapshotId), newTableMetadata.toJson());
-            if (committed) {
-                commitLatestHint(currentSnapshotId);
-            }
-        } catch (IOException e) {
-            throw new RuntimeException("Failed to upgrade table", e);
-        }
-    }
-
-    private TableMetadata generateLatestMetadata(Snapshot newSnapshot) {
-        List<Snapshot> snapshots = Lists.newArrayList();
-        Optional<TableMetadata> latestMetadata = findLatestMetadata();
-        if (latestMetadata.isPresent()) {
-            TableMetadata tableMetadata = latestMetadata.get();
-            snapshots = tableMetadata.snapshots();
-        } else {
-            try {
-                List<Snapshot> snapshotHis = Lists.newArrayList(snapshots());
-                Long parentId = null;
-                for (Snapshot snapshot : snapshotHis) {
-                    snapshots.add(snapshot.copyWithParentId(parentId));
-                    parentId = snapshot.id();
-                }
-            } catch (IOException e) {
-                throw new RuntimeException("Failed to generate latest metadata", e);
-            }
-        }
-
-        snapshots.add(newSnapshot);
-
-        return new TableMetadata(
-                newSnapshot.timeMillis(), Maps.newHashMap(), newSnapshot.id(), snapshots);
-    }
-
-    private Optional<Snapshot> pickLatestSnapshotFromMetadata(Predicate<Snapshot> predicate) {
-        Snapshot snapshot = Iterables.getFirst(select(currentAncestors(), predicate), null);
-        if (snapshot != null) {
-            return Optional.of(snapshot);
-        }
-
-        return Optional.empty();
-    }
-
-    public static Path tableMetadataDirectory(Path tablePath) {
         return new Path(tablePath + "/snapshot");
     }
 
@@ -194,21 +98,6 @@ public class SnapshotManagerV2 extends SnapshotManager {
     @Override
     public Path newSnapshotPath(long snapshotId) {
         return new Path(tablePath + "/snapshot/" + TABLE_METADATA_PREFIX + snapshotId);
-    }
-
-    public static TableMetadata tableMetadata(FileIO fileIO, Path path) {
-        return TableMetadata.fromPath(fileIO, path);
-    }
-
-    private void commitMetadataHint(long metadataId, String fileName) throws IOException {
-        Path snapshotDir = tableMetadataDirectory(tablePath);
-        Path hintFile = new Path(snapshotDir, fileName);
-        fileIO.delete(hintFile, false);
-        fileIO.writeFileUtf8(hintFile, String.valueOf(metadataId));
-    }
-
-    private Path metadataPath(long metadataId) {
-        return new Path(tablePath + "/snapshot/" + TABLE_METADATA_PREFIX + metadataId);
     }
 
     @Override
@@ -351,13 +240,13 @@ public class SnapshotManagerV2 extends SnapshotManager {
 
     @Override
     public @Nullable Long latestCompactedSnapshotId() {
-        return pickSnapshot(s -> s.commitKind() == CommitKind.COMPACT);
+        return pickFromLatest(s -> s.commitKind() == CommitKind.COMPACT);
     }
 
     @Override
-    public @Nullable Long pickSnapshot(Predicate<Snapshot> predicate) {
+    public @Nullable Long pickFromLatest(Predicate<Snapshot> predicate) {
         if (useSuper()) {
-            return superManager.pickSnapshot(predicate);
+            return superManager.pickFromLatest(predicate);
         }
 
         Optional<Snapshot> pickLatestSnapshot = pickLatestSnapshotFromMetadata(predicate);
@@ -472,16 +361,15 @@ public class SnapshotManagerV2 extends SnapshotManager {
         boolean committed = fileIO.writeFileUtf8(newSnapshotPath, newTableMetadata.toJson());
         if (committed) {
             commitLatestHint(newSnapshotId);
-            useV2 = true;
         }
         return committed;
     }
 
-    private static <T> Iterable<T> select(Iterable<T> it, Predicate<T> pred) {
-        return () -> StreamSupport.stream(it.spliterator(), false).filter(pred).iterator();
+    private static <T> Iterable<T> select(Iterable<T> it, Predicate<T> predicate) {
+        return () -> StreamSupport.stream(it.spliterator(), false).filter(predicate).iterator();
     }
 
-    public Iterable<Snapshot> currentAncestors() {
+    private Iterable<Snapshot> currentAncestors() {
         return ancestorsOf(latestSnapshot(), this::snapshot);
     }
 
@@ -540,6 +428,7 @@ public class SnapshotManagerV2 extends SnapshotManager {
             try {
                 TimeUnit.MILLISECONDS.sleep(READ_HINT_RETRY_INTERVAL);
             } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
                 throw new RuntimeException(e);
             }
         }
@@ -547,7 +436,8 @@ public class SnapshotManagerV2 extends SnapshotManager {
     }
 
     private boolean useSuper() {
-        return false;
+        // todo : add a logic to control whether use super manager
+        return !useV2;
     }
 
     private boolean metadataExists() {
@@ -561,5 +451,116 @@ public class SnapshotManagerV2 extends SnapshotManager {
             LOG.warn("Failed to check metadata hint exist or not", e);
         }
         return false;
+    }
+
+    private static TableMetadata tableMetadata(FileIO fileIO, Path path) {
+        return TableMetadata.fromPath(fileIO, path);
+    }
+
+    private void commitMetadataHint(long metadataId, String fileName) throws IOException {
+        Path snapshotDir = tableMetadataDirectory(tablePath);
+        Path hintFile = new Path(snapshotDir, fileName);
+        fileIO.delete(hintFile, false);
+        fileIO.writeFileUtf8(hintFile, String.valueOf(metadataId));
+    }
+
+    private Path metadataPath(long metadataId) {
+        return new Path(tablePath + "/snapshot/" + TABLE_METADATA_PREFIX + metadataId);
+    }
+
+    private TableMetadata generateLatestMetadata(Snapshot newSnapshot) {
+        List<Snapshot> snapshots = Lists.newArrayList();
+        Optional<TableMetadata> latestMetadata = findLatestMetadata();
+        if (latestMetadata.isPresent()) {
+            TableMetadata tableMetadata = latestMetadata.get();
+            snapshots = tableMetadata.snapshots();
+        } else {
+            try {
+                List<Snapshot> snapshotHis = Lists.newArrayList(snapshots());
+                Long parentId = null;
+                for (Snapshot snapshot : snapshotHis) {
+                    snapshots.add(snapshot.copyWithParentId(parentId));
+                    parentId = snapshot.id();
+                }
+            } catch (IOException e) {
+                throw new RuntimeException("Failed to generate latest metadata", e);
+            }
+        }
+
+        snapshots.add(newSnapshot);
+
+        return new TableMetadata(
+                newSnapshot.timeMillis(), Maps.newHashMap(), newSnapshot.id(), snapshots);
+    }
+
+    private void upgradeTable() {
+        List<Snapshot> snapshots;
+        try {
+            List<Snapshot> snapshotHis = Lists.newArrayList(superManager.snapshots());
+            snapshots = Lists.newArrayList();
+            Long parentId = null;
+            for (Snapshot snapshot : snapshotHis) {
+                snapshots.add(snapshot.copyWithParentId(parentId));
+                parentId = snapshot.id();
+            }
+
+            Snapshot currentSnapshot = snapshots.get(snapshots.size() - 1);
+            TableMetadata newTableMetadata =
+                    new TableMetadata(
+                            currentSnapshot.timeMillis(),
+                            Maps.newHashMap(),
+                            currentSnapshot.id(),
+                            snapshots);
+
+            long currentSnapshotId = currentSnapshot.id();
+
+            boolean committed =
+                    fileIO.writeFileUtf8(
+                            metadataPath(currentSnapshotId), newTableMetadata.toJson());
+            if (committed) {
+                commitLatestHint(currentSnapshotId);
+            }
+        } catch (IOException e) {
+            throw new RuntimeException("Failed to upgrade table", e);
+        }
+    }
+
+    private Optional<Snapshot> pickLatestSnapshotFromMetadata(Predicate<Snapshot> predicate) {
+        Snapshot snapshot = Iterables.getFirst(select(currentAncestors(), predicate), null);
+        if (snapshot != null) {
+            return Optional.of(snapshot);
+        }
+
+        return Optional.empty();
+    }
+
+    private static Path tableMetadataDirectory(Path tablePath) {
+        return new Path(tablePath + "/snapshot");
+    }
+
+    private Optional<Long> findLatestMetadataId() throws IOException {
+        Path metadataDirectory = tableMetadataDirectory(tablePath);
+        if (!fileIO.exists(metadataDirectory)) {
+            return Optional.empty();
+        }
+
+        Long metadataId = readMetadataHint(METADATA_LATEST);
+        if (metadataId != null) {
+            long nextId = metadataId + 1;
+            // it is the latest only there is no next one
+            if (!medataExists(nextId)) {
+                return Optional.of(metadataId);
+            }
+        }
+
+        return Optional.of(findByListFiles(Math::max));
+    }
+
+    private Optional<TableMetadata> findLatestMetadata() {
+        try {
+            return findLatestMetadataId().map(id -> tableMetadata(fileIO, metadataPath(id)));
+        } catch (IOException e) {
+            throw new RuntimeException("Failed to find latest metadata", e);
+        }
     }
 }

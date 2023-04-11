@@ -23,7 +23,7 @@ import org.apache.paimon.fs.local.LocalFileIO;
 import org.apache.paimon.shade.guava30.com.google.common.collect.ImmutableList;
 import org.apache.paimon.utils.BlockingIterator;
 import org.apache.paimon.utils.SnapshotManager;
-import org.apache.paimon.utils.SnapshotManagerBuilder;
+import org.apache.paimon.utils.SnapshotManagerChain;
 
 import org.apache.flink.types.Row;
 import org.junit.Test;
@@ -186,7 +186,7 @@ public class ContinuousFileStoreITCase extends CatalogITCaseBase {
         iterator.close();
 
         SnapshotManager snapshotManager =
-                SnapshotManagerBuilder.of(LocalFileIO.create(), getTableDirectory("T1"));
+                SnapshotManagerChain.of(LocalFileIO.create(), getTableDirectory("T1"));
         List<Snapshot> snapshots =
                 new ArrayList<>(ImmutableList.copyOf(snapshotManager.snapshots()));
         snapshots.sort(Comparator.comparingLong(Snapshot::timeMillis));
@@ -250,7 +250,7 @@ public class ContinuousFileStoreITCase extends CatalogITCaseBase {
         iterator.close();
 
         SnapshotManager snapshotManager =
-                SnapshotManagerBuilder.of(LocalFileIO.create(), getTableDirectory("T1"));
+                SnapshotManagerChain.of(LocalFileIO.create(), getTableDirectory("T1"));
         List<Snapshot> snapshots =
                 new ArrayList<>(ImmutableList.copyOf(snapshotManager.snapshots()));
         snapshots.sort(Comparator.comparingLong(Snapshot::timeMillis));

@@ -26,7 +26,7 @@ import org.apache.paimon.table.FileStoreTable;
 import org.apache.paimon.table.sink.CommitMessage;
 import org.apache.paimon.table.sink.StreamTableWrite;
 import org.apache.paimon.utils.SnapshotManager;
-import org.apache.paimon.utils.SnapshotManagerBuilder;
+import org.apache.paimon.utils.SnapshotManagerChain;
 
 import org.apache.flink.api.common.ExecutionConfig;
 import org.apache.flink.api.common.typeutils.TypeSerializer;
@@ -125,8 +125,7 @@ public class CommitterOperatorTest extends CommitterOperatorTestBase {
         testHarness.snapshot(cpId, 1);
         testHarness.notifyOfCompletedCheckpoint(cpId);
 
-        SnapshotManager snapshotManager =
-                SnapshotManagerBuilder.of(LocalFileIO.create(), tablePath);
+        SnapshotManager snapshotManager = SnapshotManagerChain.of(LocalFileIO.create(), tablePath);
 
         // should create 10 snapshots
         assertThat(snapshotManager.latestSnapshotId()).isEqualTo(cpId);

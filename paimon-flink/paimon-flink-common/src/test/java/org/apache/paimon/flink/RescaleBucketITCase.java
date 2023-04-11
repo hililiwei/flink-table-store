@@ -23,7 +23,7 @@ import org.apache.paimon.fs.local.LocalFileIO;
 import org.apache.paimon.schema.SchemaManager;
 import org.apache.paimon.schema.TableSchema;
 import org.apache.paimon.utils.SnapshotManager;
-import org.apache.paimon.utils.SnapshotManagerBuilder;
+import org.apache.paimon.utils.SnapshotManagerChain;
 
 import org.apache.flink.core.execution.JobClient;
 import org.apache.flink.core.execution.SavepointFormatType;
@@ -117,7 +117,7 @@ public class RescaleBucketITCase extends CatalogITCaseBase {
         Snapshot lastSnapshot = findLatestSnapshot("T3");
         assertThat(lastSnapshot).isNotNull();
         SnapshotManager snapshotManager =
-                SnapshotManagerBuilder.of(LocalFileIO.create(), getTableDirectory("T3"));
+                SnapshotManagerChain.of(LocalFileIO.create(), getTableDirectory("T3"));
         for (long snapshotId = lastSnapshot.id();
                 snapshotId > snapshotAfterRescale.id();
                 snapshotId--) {

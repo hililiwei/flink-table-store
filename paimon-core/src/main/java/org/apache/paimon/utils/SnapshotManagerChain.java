@@ -21,20 +21,25 @@ package org.apache.paimon.utils;
 import org.apache.paimon.fs.FileIO;
 import org.apache.paimon.fs.Path;
 
+import java.io.Serializable;
+
 /** Builder for {@link SnapshotManager}. */
-public final class SnapshotManagerBuilder {
+public final class SnapshotManagerChain implements Serializable {
+
+    private static final long serialVersionUID = 1L;
+
     private FileIO fileIO;
     private Path tablePath;
 
-    private SnapshotManagerBuilder() {}
+    private SnapshotManagerChain() {}
 
-    private SnapshotManagerBuilder(FileIO fileIO, Path tablePath) {
+    private SnapshotManagerChain(FileIO fileIO, Path tablePath) {
         this.fileIO = fileIO;
         this.tablePath = tablePath;
     }
 
     public static SnapshotManager of(FileIO fileIO, Path tablePath) {
-        return new SnapshotManagerBuilder(fileIO, tablePath).build();
+        return new SnapshotManagerChain(fileIO, tablePath).build();
     }
 
     private SnapshotManager build() {

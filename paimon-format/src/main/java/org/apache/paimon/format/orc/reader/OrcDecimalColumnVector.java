@@ -20,7 +20,7 @@ package org.apache.paimon.format.orc.reader;
 
 import org.apache.paimon.data.Decimal;
 
-import org.apache.hadoop.hive.ql.exec.vector.DecimalColumnVector;
+import org.apache.orc.storage.ql.exec.vector.DecimalColumnVector;
 
 import java.math.BigDecimal;
 

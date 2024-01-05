@@ -18,10 +18,10 @@
 
 package org.apache.paimon.format.orc.filter;
 
-import org.apache.hadoop.hive.common.type.HiveDecimal;
-import org.apache.hadoop.hive.ql.io.sarg.PredicateLeaf;
-import org.apache.hadoop.hive.ql.io.sarg.SearchArgument;
-import org.apache.hadoop.hive.serde2.io.HiveDecimalWritable;
+import org.apache.orc.storage.common.type.HiveDecimal;
+import org.apache.orc.storage.ql.io.sarg.PredicateLeaf;
+import org.apache.orc.storage.ql.io.sarg.SearchArgument;
+import org.apache.orc.storage.serde2.io.HiveDecimalWritable;
 
 import java.io.Serializable;
 import java.math.BigDecimal;

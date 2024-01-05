@@ -18,7 +18,7 @@
 
 package org.apache.paimon.format.orc.reader;
 
-import org.apache.hadoop.hive.ql.exec.vector.DoubleColumnVector;
+import org.apache.orc.storage.ql.exec.vector.DoubleColumnVector;
 
 /**
  * This column vector is used to adapt hive's DoubleColumnVector to Paimon's float and double

@@ -20,8 +20,8 @@ package org.apache.paimon.format.orc.reader;
 
 import org.apache.paimon.data.Timestamp;
 
-import org.apache.hadoop.hive.ql.exec.vector.ColumnVector;
-import org.apache.hadoop.hive.ql.exec.vector.LongColumnVector;
+import org.apache.orc.storage.ql.exec.vector.ColumnVector;
+import org.apache.orc.storage.ql.exec.vector.LongColumnVector;
 
 import java.time.LocalDateTime;
 

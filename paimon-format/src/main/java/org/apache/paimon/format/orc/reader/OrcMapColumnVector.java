@@ -23,7 +23,7 @@ import org.apache.paimon.data.columnar.ColumnVector;
 import org.apache.paimon.data.columnar.ColumnarMap;
 import org.apache.paimon.types.MapType;
 
-import org.apache.hadoop.hive.ql.exec.vector.MapColumnVector;
+import org.apache.orc.storage.ql.exec.vector.MapColumnVector;
 
 /** This column vector is used to adapt hive's MapColumnVector to Paimon's MapColumnVector. */
 public class OrcMapColumnVector extends AbstractOrcColumnVector

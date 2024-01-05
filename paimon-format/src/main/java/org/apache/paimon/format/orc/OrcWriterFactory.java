@@ -47,7 +47,7 @@ import static org.apache.paimon.utils.Preconditions.checkNotNull;
 /**
  * A factory that creates an ORC {@link FormatWriter}. The factory takes a user supplied {@link
  * Vectorizer} implementation to convert the element into an {@link
- * org.apache.hadoop.hive.ql.exec.vector.VectorizedRowBatch}.
+ * org.apache.orc.storage.ql.exec.vector.VectorizedRowBatch}.
  */
 public class OrcWriterFactory implements FormatWriterFactory {
 

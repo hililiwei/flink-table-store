@@ -21,8 +21,8 @@ package org.apache.paimon.format.orc.reader;
 import org.apache.paimon.data.Timestamp;
 import org.apache.paimon.utils.DateTimeUtils;
 
-import org.apache.hadoop.hive.ql.exec.vector.ColumnVector;
-import org.apache.hadoop.hive.ql.exec.vector.TimestampColumnVector;
+import org.apache.orc.storage.ql.exec.vector.ColumnVector;
+import org.apache.orc.storage.ql.exec.vector.TimestampColumnVector;
 
 /**
  * This column vector is used to adapt hive's TimestampColumnVector to Paimon's

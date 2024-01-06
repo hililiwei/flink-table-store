@@ -16,13 +16,13 @@
  * limitations under the License.
  */
 
-package org.apache.paimon.hive;
+package org.apache.paimon.flink;
 
 import org.apache.paimon.catalog.Catalog;
 import org.apache.paimon.catalog.CatalogLock;
 import org.apache.paimon.catalog.Identifier;
-import org.apache.paimon.flink.DataCatalogTable;
-import org.apache.paimon.flink.FlinkCatalog;
+import org.apache.paimon.hive.HiveCatalog;
+import org.apache.paimon.hive.PaimonStorageHandler;
 import org.apache.paimon.hive.annotation.Minio;
 import org.apache.paimon.hive.runner.PaimonEmbeddedHiveRunner;
 import org.apache.paimon.s3.MinioTestContainer;
@@ -43,6 +43,7 @@ import org.apache.flink.table.catalog.exceptions.DatabaseNotExistException;
 import org.apache.flink.table.catalog.exceptions.TableAlreadyExistException;
 import org.apache.flink.types.Row;
 import org.apache.flink.util.CloseableIterator;
+import org.assertj.core.api.Assertions;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
@@ -273,7 +274,7 @@ public abstract class HiveCatalogITCaseBase {
         tEnv.executeSql("USE test_db").await();
         tEnv.executeSql("CREATE TABLE t ( a INT, b STRING ) WITH ( 'file.format' = 'avro' )")
                 .await();
-        assertThat(
+        Assertions.assertThat(
                         hiveShell
                                 .executeQuery("DESC FORMATTED t")
                                 .contains("Table Type:         \tEXTERNAL_TABLE      \tNULL"))
@@ -312,7 +313,7 @@ public abstract class HiveCatalogITCaseBase {
                                 + "(true, CAST(1 AS TINYINT), CAST(1 AS SMALLINT), 1, 1234567890123456789, 1.23, 3.14159, CAST('1234.56' AS DECIMAL(10, 2)), 'ABC', 'v1', 'Hello, World!', X'010203', X'010203', DATE '2023-01-01', TIMESTAMP '2023-01-01 12:00:00.123', ARRAY['value1', 'value2', 'value3'], MAP['key1', 'value1', 'key2', 'value2'], ROW('v1', 1)), "
                                 + "(false, CAST(2 AS TINYINT), CAST(2 AS SMALLINT), 2, 234567890123456789, 2.34, 2.111111, CAST('2345.67' AS DECIMAL(10, 2)), 'DEF', 'v2', 'Apache Paimon', X'040506',X'040506', DATE '2023-02-01', TIMESTAMP '2023-02-01 12:00:00.456', ARRAY['value4', 'value5', 'value6'], MAP['key1', 'value11', 'key2', 'value22'], ROW('v2', 2))")
                 .await();
-        assertThat(
+        Assertions.assertThat(
                         hiveShell.executeQuery(
                                 "SELECT f0, f1, f2, f3, f4, f5, f6, f7, f8, f9, f10, hex(f11), hex(f12), f13, f14, f15, f15[0] as f15a, f16['key1'] as f16a, f16['key2'] as f16b, f17, f17.f0, f17.f1 FROM t ORDER BY f3"))
                 .isEqualTo(
@@ -804,14 +805,14 @@ public abstract class HiveCatalogITCaseBase {
         String sql1 =
                 "select v, ptb, k from t where "
                         + "pta >= 2 and ptb <= '3a' and (k % 10) >= 1 and (k % 10) <= 2";
-        assertThat(hiveShell.executeQuery(sql1))
+        Assertions.assertThat(hiveShell.executeQuery(sql1))
                 .containsExactlyInAnyOrder(
                         "2001\t2a\t21", "2002\t2a\t22", "3001\t3a\t31", "3002\t3a\t32");
 
         String sql2 =
                 "select v, ptb, k from t where "
                         + "pta >= 2 and ptb <= '3a' and (v % 10) >= 3 and (v % 10) <= 4";
-        assertThat(hiveShell.executeQuery(sql2))
+        Assertions.assertThat(hiveShell.executeQuery(sql2))
                 .containsExactlyInAnyOrder(
                         "2003\t2a\t23", "2004\t2a\t24", "3003\t3a\t33", "3004\t3a\t34");
     }
@@ -870,7 +871,7 @@ public abstract class HiveCatalogITCaseBase {
         }
         tEnv.executeSql("INSERT INTO t VALUES " + String.join(", ", values)).await();
 
-        assertThat(hiveShell.executeQuery("show partitions t"))
+        Assertions.assertThat(hiveShell.executeQuery("show partitions t"))
                 .containsExactlyInAnyOrder(
                         "ptb=1a/pta=1",
                         "ptb=1b/pta=1",
@@ -894,7 +895,7 @@ public abstract class HiveCatalogITCaseBase {
                         "    'metastore.partitioned-table' = 'true'",
                         ")"));
         tEnv.executeSql("INSERT INTO t VALUES (1, 10), (2, 20)").await();
-        assertThat(hiveShell.executeQuery("SELECT * FROM t ORDER BY k"))
+        Assertions.assertThat(hiveShell.executeQuery("SELECT * FROM t ORDER BY k"))
                 .containsExactlyInAnyOrder("1\t10", "2\t20");
     }
 
@@ -922,13 +923,13 @@ public abstract class HiveCatalogITCaseBase {
                         .table();
         table.createTag("2023-10-16", 1);
 
-        assertThat(hiveShell.executeQuery("SHOW PARTITIONS t"))
+        Assertions.assertThat(hiveShell.executeQuery("SHOW PARTITIONS t"))
                 .containsExactlyInAnyOrder("dt=2023-10-16");
 
-        assertThat(hiveShell.executeQuery("SELECT k, v FROM t WHERE dt='2023-10-16'"))
+        Assertions.assertThat(hiveShell.executeQuery("SELECT k, v FROM t WHERE dt='2023-10-16'"))
                 .containsExactlyInAnyOrder("1\t10", "2\t20");
 
-        assertThat(hiveShell.executeQuery("SELECT * FROM t WHERE dt='2023-10-16'"))
+        Assertions.assertThat(hiveShell.executeQuery("SELECT * FROM t WHERE dt='2023-10-16'"))
                 .containsExactlyInAnyOrder("1\t10\t2023-10-16", "2\t20\t2023-10-16");
 
         // another tag
@@ -936,7 +937,7 @@ public abstract class HiveCatalogITCaseBase {
         tEnv.executeSql("INSERT INTO t VALUES (3, 30), (4, 40)").await();
         table.createTag("2023-10-17", 2);
 
-        assertThat(hiveShell.executeQuery("SELECT * FROM t"))
+        Assertions.assertThat(hiveShell.executeQuery("SELECT * FROM t"))
                 .containsExactlyInAnyOrder(
                         "1\t10\t2023-10-16",
                         "2\t20\t2023-10-16",
@@ -967,13 +968,15 @@ public abstract class HiveCatalogITCaseBase {
         assertThat(result).hasSize(1);
         String tag = result.get(0).split("=")[1];
 
-        assertThat(hiveShell.executeQuery(String.format("SELECT k, v FROM t WHERE dt='%s'", tag)))
+        Assertions.assertThat(
+                        hiveShell.executeQuery(
+                                String.format("SELECT k, v FROM t WHERE dt='%s'", tag)))
                 .containsExactlyInAnyOrder("1\t10", "2\t20");
 
         tEnv.executeSql("INSERT INTO t VALUES (3, 30), (4, 40)").await();
         if (hiveShell.executeQuery("SHOW PARTITIONS t").size() == 1) {
             // no new partition
-            assertThat(
+            Assertions.assertThat(
                             hiveShell.executeQuery(
                                     String.format("SELECT k, v FROM t WHERE dt='%s'", tag)))
                     .containsExactlyInAnyOrder("1\t10", "2\t20", "3\t30", "4\t40");

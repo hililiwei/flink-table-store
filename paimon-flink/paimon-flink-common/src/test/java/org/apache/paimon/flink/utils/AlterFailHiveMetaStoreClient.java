@@ -16,43 +16,33 @@
  * limitations under the License.
  */
 
-package org.apache.paimon.hive;
+package org.apache.paimon.flink.utils;
 
 import org.apache.hadoop.hive.conf.HiveConf;
 import org.apache.hadoop.hive.metastore.HiveMetaHookLoader;
 import org.apache.hadoop.hive.metastore.HiveMetaStoreClient;
 import org.apache.hadoop.hive.metastore.IMetaStoreClient;
-import org.apache.hadoop.hive.metastore.api.AlreadyExistsException;
-import org.apache.hadoop.hive.metastore.api.InvalidObjectException;
 import org.apache.hadoop.hive.metastore.api.InvalidOperationException;
 import org.apache.hadoop.hive.metastore.api.MetaException;
-import org.apache.hadoop.hive.metastore.api.NoSuchObjectException;
 import org.apache.hadoop.hive.metastore.api.Table;
 import org.apache.thrift.TException;
 
-/** A {@link HiveMetaStoreClient} to test creating table failed in Hive metastore client. */
-public class CreateFailHiveMetaStoreClient extends HiveMetaStoreClient implements IMetaStoreClient {
+/** A {@link HiveMetaStoreClient} to test altering table failed in Hive metastore client. */
+public class AlterFailHiveMetaStoreClient extends HiveMetaStoreClient implements IMetaStoreClient {
 
-    public CreateFailHiveMetaStoreClient(HiveConf conf) throws MetaException {
+    public AlterFailHiveMetaStoreClient(HiveConf conf) throws MetaException {
         super(conf);
     }
 
-    public CreateFailHiveMetaStoreClient(HiveConf conf, HiveMetaHookLoader hookLoader)
+    public AlterFailHiveMetaStoreClient(HiveConf conf, HiveMetaHookLoader hookLoader)
             throws MetaException {
         super(conf, hookLoader);
     }
 
-    public CreateFailHiveMetaStoreClient(
+    public AlterFailHiveMetaStoreClient(
             HiveConf conf, HiveMetaHookLoader hookLoader, Boolean allowEmbedded)
             throws MetaException {
         super(conf, hookLoader, allowEmbedded);
-    }
-
-    @Override
-    public void createTable(Table tbl)
-            throws AlreadyExistsException, InvalidObjectException, MetaException,
-                    NoSuchObjectException, TException {
-        throw new TException();
     }
 
     @Override

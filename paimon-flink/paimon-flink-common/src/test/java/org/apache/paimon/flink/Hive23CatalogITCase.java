@@ -16,9 +16,13 @@
  * limitations under the License.
  */
 
-package org.apache.paimon.hive;
+package org.apache.paimon.flink;
 
+import org.apache.paimon.flink.utils.AlterFailHiveMetaStoreClient;
+import org.apache.paimon.flink.utils.CreateFailHiveMetaStoreClient;
+import org.apache.paimon.flink.utils.TestHiveMetaStoreClient;
 import org.apache.paimon.fs.local.LocalFileIO;
+import org.apache.paimon.hive.HiveCatalog;
 import org.apache.paimon.hive.runner.PaimonEmbeddedHiveRunner;
 import org.apache.paimon.schema.SchemaManager;
 import org.apache.paimon.testutils.assertj.AssertionUtils;

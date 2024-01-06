@@ -16,10 +16,8 @@
  * limitations under the License.
  */
 
-package org.apache.paimon.hive.procedure;
+package org.apache.paimon.flink.action;
 
-import org.apache.paimon.flink.action.ActionITCaseBase;
-import org.apache.paimon.flink.action.MigrateTableAction;
 import org.apache.paimon.flink.procedure.MigrateFileProcedure;
 import org.apache.paimon.hive.TestHiveMetastore;
 

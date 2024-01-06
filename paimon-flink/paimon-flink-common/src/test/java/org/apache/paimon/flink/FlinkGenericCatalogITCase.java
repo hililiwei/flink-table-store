@@ -16,10 +16,8 @@
  * limitations under the License.
  */
 
-package org.apache.paimon.hive;
+package org.apache.paimon.flink;
 
-import org.apache.paimon.flink.FlinkGenericCatalog;
-import org.apache.paimon.flink.FlinkGenericCatalogFactory;
 import org.apache.paimon.hive.annotation.Minio;
 import org.apache.paimon.hive.runner.PaimonEmbeddedHiveRunner;
 import org.apache.paimon.s3.MinioTestContainer;

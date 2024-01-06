@@ -18,6 +18,7 @@
 
 package org.apache.paimon.hive;
 
+import org.apache.paimon.flink.HiveCatalogITCaseBase;
 import org.apache.paimon.fs.local.LocalFileIO;
 import org.apache.paimon.hive.runner.PaimonEmbeddedHiveRunner;
 import org.apache.paimon.schema.SchemaManager;

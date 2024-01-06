@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package org.apache.paimon.hive;
+package org.apache.paimon.flink.utils;
 
 import org.apache.hadoop.hive.conf.HiveConf;
 import org.apache.hadoop.hive.metastore.HiveMetaHookLoader;

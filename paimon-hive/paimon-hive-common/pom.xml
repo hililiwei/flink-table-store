@@ -85,10 +85,6 @@ under the License.
                     <artifactId>jackson-databind</artifactId>
                 </exclusion>
                 <exclusion>
-                    <groupId>org.apache.orc</groupId>
-                    <artifactId>orc-core</artifactId>
-                </exclusion>
-                <exclusion>
                     <groupId>jdk.tools</groupId>
                     <artifactId>jdk.tools</artifactId>
                 </exclusion>
@@ -120,10 +116,6 @@ under the License.
                 <exclusion>
                     <groupId>com.fasterxml.jackson.core</groupId>
                     <artifactId>jackson-databind</artifactId>
-                </exclusion>
-                <exclusion>
-                    <groupId>org.apache.orc</groupId>
-                    <artifactId>orc-core</artifactId>
                 </exclusion>
                 <exclusion>
                     <groupId>org.pentaho</groupId>

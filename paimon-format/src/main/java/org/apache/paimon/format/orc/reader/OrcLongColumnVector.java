@@ -18,7 +18,7 @@
 
 package org.apache.paimon.format.orc.reader;
 
-import org.apache.hadoop.hive.ql.exec.vector.LongColumnVector;
+import org.apache.orc.storage.ql.exec.vector.LongColumnVector;
 
 /**
  * This column vector is used to adapt hive's LongColumnVector to Paimon's boolean, byte, short, int

@@ -49,6 +49,7 @@ under the License.
         <hiverunner.version>4.0.0</hiverunner.version>
         <reflections.version>0.9.8</reflections.version>
         <aws.version>1.12.319</aws.version>
+        <orc.version>1.8.3</orc.version>
     </properties>
 
     <dependencies>

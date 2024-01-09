@@ -42,7 +42,7 @@ import org.apache.paimon.types.TinyIntType;
 import org.apache.paimon.types.VarBinaryType;
 import org.apache.paimon.types.VarCharType;
 
-import org.apache.hadoop.hive.ql.io.sarg.PredicateLeaf;
+import org.apache.orc.storage.ql.io.sarg.PredicateLeaf;
 import org.assertj.core.util.Lists;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;

@@ -18,7 +18,7 @@
 
 package org.apache.paimon.format.orc.reader;
 
-import org.apache.hadoop.hive.ql.exec.vector.BytesColumnVector;
+import org.apache.orc.storage.ql.exec.vector.BytesColumnVector;
 
 /** This column vector is used to adapt hive's BytesColumnVector to Paimon's BytesColumnVector. */
 public class OrcBytesColumnVector extends AbstractOrcColumnVector

@@ -24,7 +24,7 @@ import org.apache.paimon.predicate.FieldRef;
 import org.apache.paimon.predicate.FunctionVisitor;
 import org.apache.paimon.types.DataType;
 
-import org.apache.hadoop.hive.ql.io.sarg.PredicateLeaf;
+import org.apache.orc.storage.ql.io.sarg.PredicateLeaf;
 
 import javax.annotation.Nullable;
 

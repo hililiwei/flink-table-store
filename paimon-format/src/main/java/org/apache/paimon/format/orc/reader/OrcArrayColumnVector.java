@@ -23,7 +23,7 @@ import org.apache.paimon.data.columnar.ColumnVector;
 import org.apache.paimon.data.columnar.ColumnarArray;
 import org.apache.paimon.types.ArrayType;
 
-import org.apache.hadoop.hive.ql.exec.vector.ListColumnVector;
+import org.apache.orc.storage.ql.exec.vector.ListColumnVector;
 
 /** This column vector is used to adapt hive's ListColumnVector to Paimon's ArrayColumnVector. */
 public class OrcArrayColumnVector extends AbstractOrcColumnVector
